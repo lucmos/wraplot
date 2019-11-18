@@ -8,7 +8,7 @@ import numpy as np
 
 import matplotlib
 
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -17,7 +17,20 @@ from matplotlib import tri as mtri
 
 import imageio
 
-#from src.datastructures import Manifold
+
+def get(obj, name=None, enforce_presence=False, default_value=None):
+    assert obj is not None
+    if not isinstance(obj, dict):
+        return obj
+
+    assert name is not None
+    if name not in obj:
+        if enforce_presence:
+            raise RuntimeError(f'Missing {name} in dictionary')
+        else:
+            return default_value
+
+    return obj[name]
 
 
 ######################################
@@ -109,22 +122,22 @@ class Plotter(metaclass=abc.ABCMeta):
             plt.title(title)
 
         if 'title' in obj:
-            plt.title(obj['title'], fontsize=25 if 'titlesize' not in obj else obj['titlesize'])
+            plt.title(get(obj, 'title'), fontsize=get(obj, 'titlesize', default_value=25))
 
         if 'xlabel' in obj:
-            ax.set_xlabel(obj['xlabel'], fontsize=25 if 'xlabelsize' not in obj else obj['xlabelsize'])
+            ax.set_xlabel(get(obj, 'xlabel'), fontsize=get(obj, 'xlabelsize', default_value=25))
 
         if 'ylabel' in obj:
-            ax.set_ylabel(obj['ylabel'], fontsize=25 if 'ylabelsize' not in obj else obj['ylabelsize'])
+            ax.set_ylabel(get(obj, 'ylabel'), fontsize=get(obj, 'ylabelsize', default_value=25))
 
         for tick in ax.xaxis.get_major_ticks():
-            tick.label.set_fontsize(20 if 'ticksize' not in obj else obj['ticksize'])
+            tick.label.set_fontsize(get(obj, 'xticksize', default_value=20))
 
         for tick in ax.yaxis.get_major_ticks():
-            tick.label.set_fontsize(20 if 'ticksize' not in obj else obj['ticksize'])
+            tick.label.set_fontsize(get(obj, 'yticksize', default_value=20))
 
         if 'axis' in obj:
-            ax.axis(obj['axis'])
+            ax.axis(get(obj, 'axis'))
 
         ax = self.plot(ax, obj, self.zorder)
 
@@ -139,6 +152,27 @@ class Plotter(metaclass=abc.ABCMeta):
         return fig
 
 
+import collections
+
+
+def flatten(S):
+    if isinstance(S, np.ndarray):
+        S = S.tolist()
+        
+    if not isinstance(S, collections.Sequence):
+        return [S]
+    
+    if len(S) == 0:
+        return S
+    
+    if isinstance(S[0], collections.Sequence):
+        return flatten(S[0]) + flatten(S[1:])
+    
+    if len(S[1:])>0:
+        return S[:1] + flatten(S[1:])
+
+    return S[:1]
+
 class Subplotter:
     """
     Plot multiple Manifolds in a standard way
@@ -146,8 +180,6 @@ class Subplotter:
     T = TypeVar('T')
 
     def __init__(self,
-                 num_rows: int = 2,
-                 num_cols: int = 2,
                  file_dpi: int = 150,
                  jupy_dpi: int = 50,
                  figsize: (int, int) = (15, 15)):
@@ -160,8 +192,6 @@ class Subplotter:
         :param jupy_dpi: the dpi of the figure
         :param figsize: the dimension of the figure
         """
-        self.num_cols = num_cols
-        self.num_rows = num_rows
         self.file_dpi = file_dpi
         self.jupy_dpi = jupy_dpi
         self.figsize = figsize
@@ -187,18 +217,26 @@ class Subplotter:
         """
         plt.style.use('ggplot')
 
-        fig, axes = plt.subplots(self.num_rows, self.num_cols, figsize=self.figsize, dpi=self.file_dpi)
+        if not isinstance(obj, collections.Sequence):
+            num_rows = 1
+            num_cols = 1
+        elif not isinstance(obj[0], collections.Sequence):
+            num_rows = 1
+            num_cols = len(obj)
+        else:
+            num_rows = len(obj)
+            num_cols = len(obj[0])
+
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=self.figsize, dpi=self.file_dpi)
+
+        flat_objs = flatten(obj)
+        flat_axes = flatten(axes)
 
         plot_functions = cycle(plot_functions) if isinstance(plot_functions, Iterable) else cycle((plot_functions,))
 
-        i = 0
-        for i_row, ax_row in enumerate(axes if isinstance(axes, Iterable) else [axes]):
-            for i_col, ax in enumerate(ax_row if isinstance(ax_row, Iterable) else [ax_row]):
-                plot_function = next(plot_functions)
-                plot_function(obj[i], fig=fig, ax=ax, xlim=xlim, ylim=ylim, )
-                i += 1
-
-        assert len(obj) == i, f'The number of objects {len(obj)} != number of subplots {i}'
+        for (obj_el, ax_el) in zip(flat_objs, flat_axes):
+            plot_function = next(plot_functions)
+            plot_function(ax=ax_el, obj=obj_el, fig=fig,  xlim=xlim, ylim=ylim, )
 
         plt.tight_layout()
 
@@ -330,8 +368,8 @@ class Spy(Plotter):
         self.markersize = markersize
 
     def plot(self, ax: Axes, obj: Dict[str, Any], zorder: int = 1) -> Axes:
-        matrix = obj['matrix']
-        markersize = obj['markersize'] if 'markersize' in obj else self.markersize
+        matrix = get(obj, 'matrix', enforce_presence=True)
+        markersize = get(obj, 'markersize', default_value=self.markersize)
         ax.spy(matrix, markersize=markersize, zorder=zorder)
         # ax.grid(False)
         return ax
@@ -347,7 +385,7 @@ class Imagesc(Plotter):
         super().__init__(file_dpi, jupy_dpi, figsize, xlim, ylim)
 
     def plot(self, ax: Axes, obj: Dict[str, Any], zorder: int = 1) -> Axes:
-        matrix = obj['matrix']
+        matrix = get(obj, 'matrix', enforce_presence=True)
         ax.imshow(matrix, zorder=zorder)
         # ax.grid(False)
         return ax
@@ -366,8 +404,8 @@ class PlotCloud2D(Plotter):
         self.color = '#155084'
 
     def plot(self, ax: Axes, obj: Dict[str, Any], zorder: int = 1) -> Axes:
-        points = obj['points']
-        markersize = obj['markersize'] if 'markersize' in obj else self.markersize
+        points = get(obj, 'points', enforce_presence=True)
+        markersize = get(obj, 'markersize', default_value=self.markersize)
         color = self.color
 
         if 'order_color_rgb' in obj:
@@ -389,15 +427,14 @@ class PlotColormap(Plotter):
         super().__init__(file_dpi, jupy_dpi, figsize, xlim, ylim, plot_3d=True)
 
     def plot(self, ax: Axes, obj: Dict[str, Any], zorder: int = 1) -> Axes:
-        manifold = obj['manifold']
-        color = obj['manifold_color']
+        manifold = get(obj, 'manifold', enforce_presence=True)
+        color = get(obj, 'manifold_color', enforce_presence=False)
 
         vertices = manifold.vertices
         faces = manifold.faces.astype(int)
 
         triang = mtri.Triangulation(vertices[:, 0].ravel(),
                                     vertices[:, 1].ravel(), faces)
-
         ax.view_init(90, 0)
         plt.axis('off')
         mm = ax.plot_trisurf(triang, np.zeros((vertices.shape[0], 1)).ravel(),
@@ -432,8 +469,9 @@ class PlotManifold(Plotter):
         self.color = (202, 62, 71)
 
     def plot(self, ax: Axes, obj: Dict[str, Any], zorder: int = 1) -> Axes:
-        manifold = obj['manifold'] if isinstance(obj, Dict) else obj
-        color = obj['manifold_edge_color'] if 'manifold_edge_color' in obj else self.color
+        manifold = get(obj, 'manifold', enforce_presence=True)
+        color = get(obj, 'manifold_edge_color', default_value=self.color)
+        
 
         ax.triplot(manifold.vertices[:, 0], manifold.vertices[:, 1], triangles=manifold.faces,
                    c=np.asarray(color) / 255, zorder=zorder)
@@ -481,14 +519,14 @@ class PlotComparison(Plotter):
         super().__init__(file_dpi, jupy_dpi, figsize, xlim, ylim, plot_3d=False, axes_equal=False)
 
     def plot(self, ax: Axes, obj: Dict[str, Any], zorder: int = 1) -> Axes:
-        lines = obj['lines']
+        lines = get(obj, 'lines', enforce_presence=True)
         for line in lines:
             ax.plot(line['x'], line['y'],
                     label=line['label'] if 'label' in line else None,
-                    linewidth=obj['linewidth'] if 'linewidth' in obj else 1,
+                    linewidth=get(obj, 'linewidth', default_value= 1),
                     zorder=zorder
                     )
-        ax.legend(prop={'size': 20 if 'legendsize' not in obj else obj['legendsize']})
+        ax.legend(prop={'size': get(obj, 'legendsize', default_value= 20)})
         return ax
 
 
@@ -502,8 +540,9 @@ class PlotBarsComparison(Plotter):
         super().__init__(file_dpi, jupy_dpi, figsize, xlim, ylim, plot_3d=False, axes_equal=False)
 
     def plot(self, ax: Axes, obj: Dict[str, Any], zorder: int = 1) -> Axes:
-        bars_value = obj['bars']
-        labels = obj['labels']
+        bars_value = get(obj, 'bars', enforce_presence=True)
+        labels = get(obj, 'labels', enforce_presence=True)
+
         ax.bar(list(range(len(bars_value))), bars_value, tick_label=labels, zorder=zorder)
 
         for tick in ax.xaxis.get_major_ticks():
@@ -511,3 +550,36 @@ class PlotBarsComparison(Plotter):
             tick.label.set_fontsize(25)
             # tick.label.set_rotation('vertical')
         return ax
+
+
+class PlotCoupledBarsComparison(Plotter):
+    def __init__(self,
+                 figsize: (int, int) = (15, 15),
+                 file_dpi: int = 150,
+                 jupy_dpi: int = 50,
+                 xlim: (float, float) = None,
+                 ylim: (float, float) = None, ):
+        super().__init__(file_dpi, jupy_dpi, figsize, xlim, ylim, plot_3d=False, axes_equal=False)
+
+    def plot(self, ax: Axes, obj: Dict[str, Any], zorder: int = 1) -> Axes:
+        bar1_values = get(obj, 'bar1_values', enforce_presence=True)
+        bar2_values = get(obj, 'bar2_values', enforce_presence=True)
+        
+        label1 = get(obj, 'label1', enforce_presence=True)
+        label2 = get(obj, 'label2', enforce_presence=True)
+        
+        xticklabels = get(obj, 'xticklabels', enforce_presence=True)
+        
+        
+        width = get(obj, 'width', enforce_presence=False, default_value=0.35)
+
+        x = np.arange(len(xticklabels))  # the label locations
+        ax.set_xticks(x)
+        ax.set_xticklabels(xticklabels)
+
+        ax.bar(x - width/2, bar1_values, label=label1, zorder=zorder, width=width)
+        ax.bar(x + width/2, bar2_values, label=label2, zorder=zorder, width=width)
+
+        ax.legend(prop={'size': get(obj, 'legendsize', default_value= 20)})
+        return ax
+    

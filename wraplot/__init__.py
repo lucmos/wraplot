@@ -1,4 +1,5 @@
-from .plotter import {
+from .plotter import (
+    get,
     Plotter,
     Subplotter,
     Animator,
@@ -9,5 +10,6 @@ from .plotter import {
     PlotManifold,
     PlotCloudOverManifold,
     PlotComparison,
-    PlotBarsComparison
-}
+    PlotBarsComparison,
+    PlotCoupledBarsComparison
+)
