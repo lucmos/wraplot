@@ -31,6 +31,9 @@ class Plotter(metaclass=abc.ABCMeta):
         title: Optional[str] = field(default=None)
         titlesize: float = field(default=25)
 
+        subtitle: Optional[str] = field(default=None)
+        subtitlesize: float = field(default=25)
+
         xlabel: Optional[str] = field(default=None)
         xlabelsize: float = field(default=25)
 
@@ -111,7 +114,7 @@ class Plotter(metaclass=abc.ABCMeta):
         self.set_static_lims(ax, obj.xlim, obj.ylim)
 
         if obj.title:
-            plt.title(obj.title, fontsize=obj.titlesize)
+            fig.suptitle(obj.title, fontsize=obj.titlesize)
 
         if obj.xlabel:
             ax.set_xlabel(obj.xlabel, fontsize=obj.xlabelsize)
@@ -222,7 +225,10 @@ class Subplotter:
             plot_function = next(plot_functions)
             plot_function(ax=ax_el, obj=obj_el, fig=fig)
 
-        plt.tight_layout()
+            if obj_el.subtitle:
+                ax_el.title.set_text(obj_el.subtitle)
+
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # account for suptitle
 
         if outfile:
             fig.savefig(fname=outfile, dpi=self.file_dpi)
