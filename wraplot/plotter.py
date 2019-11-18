@@ -111,13 +111,13 @@ class Plotter(metaclass=abc.ABCMeta):
         self.set_static_lims(ax, obj.xlim, obj.ylim)
 
         if obj.title:
-            plt.title(obj.title)
+            plt.title(obj.title, fontsize=obj.titlesize)
 
         if obj.xlabel:
-            ax.set_xlabel(obj.xlabel)
+            ax.set_xlabel(obj.xlabel, fontsize=obj.xlabelsize)
 
         if obj.ylabel:
-            ax.set_ylabel(obj.ylabel)
+            ax.set_ylabel(obj.ylabel, fontsize=obj.ylabelsize)
 
         if obj.xticksize:
             for tick in ax.xaxis.get_major_ticks():
