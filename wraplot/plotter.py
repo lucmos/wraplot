@@ -191,6 +191,7 @@ class Subplotter:
                  # : Optional[
                  #     Union[Callable[[Axes, Plotter.Object], Figure],
                  #           Iterable[Callable[[Axes, Plotter.Object], Figure]]]],
+                 subplotadjust: float = 0.9,
                  outfile: str = None,
                  close_fig=False):
         """
@@ -228,7 +229,9 @@ class Subplotter:
             if obj_el.subtitle:
                 ax_el.title.set_text(obj_el.subtitle)
 
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # account for suptitle
+        plt.tight_layout()
+
+        plt.subplots_adjust(top=subplotadjust)
 
         if outfile:
             fig.savefig(fname=outfile, dpi=self.file_dpi)
