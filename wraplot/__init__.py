@@ -1,5 +1,4 @@
 from .plotter import (
-    get,
     Plotter,
     Subplotter,
     Animator,
