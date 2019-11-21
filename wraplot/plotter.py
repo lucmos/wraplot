@@ -21,7 +21,6 @@ import collections
 ######################################
 #  Generic classes
 ######################################
-
 class Plotter(metaclass=abc.ABCMeta):
     @dataclass
     class Object:
@@ -47,9 +46,9 @@ class Plotter(metaclass=abc.ABCMeta):
         aspect: str = 'equal'
 
     def __init__(self,
-                 file_dpi: int,
-                 jupy_dpi: int,
-                 figsize: (int, int),
+                 file_dpi: int = 150,
+                 jupy_dpi: int = 50,
+                 figsize: (int, int) = (15, 15),
                  plot_3d: bool = False,
                  zorder: int = 1,
                  axes_equal: bool = True):
@@ -104,6 +103,8 @@ class Plotter(metaclass=abc.ABCMeta):
         :param close_fig: if True closes the figure
         :return: the figure
         """
+        assert isinstance(obj, Plotter.Object), f"{type(obj)} is not are plottable"
+
         plt.style.use('ggplot')
 
         fig, ax = self.get_figure(fig, ax, self.figsize, self.jupy_dpi)
@@ -407,19 +408,6 @@ class PlotManifold(Plotter):
                  file_dpi: int = 150,
                  jupy_dpi: int = 50):
         super().__init__(file_dpi, jupy_dpi, figsize, plot_3d=True)
-
-    def __init__(self,
-                 file_dpi: int = 150,
-                 jupy_dpi: int = 50,
-                 figsize: (int, int) = (15, 15)):
-        """
-        Determine how the Manifolds must be plotted
-
-        :param file_dpi: the dpi of the saved image
-        :param jupy_dpi: the dpi of the figure
-        :param figsize: the dimension of the figure
-        """
-        super().__init__(file_dpi, jupy_dpi, figsize)
 
     def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
         assert obj.manifold is not None
