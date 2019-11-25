@@ -103,7 +103,8 @@ class Plotter(metaclass=abc.ABCMeta):
         :param close_fig: if True closes the figure
         :return: the figure
         """
-        assert isinstance(obj, Plotter.Object), f"{type(obj)} is not are plottable"
+
+        assert isinstance(obj, Plotter.Object), f"{type(obj)} is not are plottable. It should be {Plotter.Object}"
 
         plt.style.use('ggplot')
 
@@ -251,7 +252,7 @@ class Animator:
     def __init__(self):
         self.images = []
 
-    def add(self, obj: Plotter.Object, plot_function: Callable[[Axes, Plotter.Object], Figure]) -> np.ndarray:
+    def add(self, obj: Plotter.Object, plot_function: Callable[[Plotter.Object], Figure]) -> np.ndarray:
         """
         Add a frame to the current animation
 
@@ -287,7 +288,7 @@ class Animator:
         :param filepath: the file where to save the animation
         :param fps: the frame-per-second of the animation
         """
-        imageio.mimsave(filepath, self.images, fps=fps, subrectangles=True)
+        return imageio.mimsave(filepath, self.images, fps=fps, subrectangles=True)
 
 
 ######################################
