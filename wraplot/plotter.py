@@ -25,12 +25,15 @@ class Plotter(metaclass=abc.ABCMeta):
     @dataclass
     class Object:
         # General appearance
-        zorder: int = 1
         matplotlib_style: str = "ggplot"
 
         # Axis
+        plot_3d: bool = False
         axis: Optional[str] = field(default=None)
-        aspect: str = 'equal'
+        axis_aspect: str = 'equal'
+        axis_grid: Optional[bool] = None
+        axis_visibility: Optional[str] = None
+        axis_view_init: Optional[Tuple[float, float]] = None
 
         xlim: Optional[Tuple[float, float]] = None
         ylim: Optional[Tuple[float, float]] = None
@@ -55,7 +58,7 @@ class Plotter(metaclass=abc.ABCMeta):
                  file_dpi: int = 150,
                  jupy_dpi: int = 50,
                  figsize: (int, int) = (15, 15),
-                 plot_3d: bool = False) -> None:
+                 zorder: int = 1) -> None:
         """
         Defines a generic plotter class
 
@@ -66,12 +69,13 @@ class Plotter(metaclass=abc.ABCMeta):
         self.figsize: (int, int) = figsize
         self.file_dpi: int = file_dpi
         self.jupy_dpi: int = jupy_dpi
-        self.plot_3d: bool = plot_3d
+        self.zorder = zorder
 
     @abc.abstractmethod
     def plot(self,
              ax: Union[Axes3D, Axes],
-             obj: Object, zorder: int = 1) -> Union[Axes3D, Axes]:
+             obj: Object,
+             zorder: int = 1) -> Union[Axes3D, Axes]:
         pass
 
     @staticmethod
@@ -86,16 +90,17 @@ class Plotter(metaclass=abc.ABCMeta):
         if zlim:
             ax.set_zlim(*zlim)
 
-    def get_figure(self,
-                   fig: Figure,
+    @staticmethod
+    def get_figure(fig: Figure,
                    ax: Union[Axes3D, Axes],
+                   plot_3d: bool,
                    figsize: (int, int),
                    jupy_dpi: int,
                    facecolor: Union[str, Tuple[float, float, float]] = 'w',
                    edgecolor: Union[str, Tuple[float, float, float]] = 'w') -> (Figure, Union[Axes3D, Axes]):
         if fig is None or ax is None:
             fig = plt.figure(figsize=figsize, dpi=jupy_dpi, facecolor=facecolor, edgecolor=edgecolor)
-            if self.plot_3d:
+            if plot_3d:
                 ax = fig.add_subplot(111, projection='3d', facecolor=facecolor)
             else:
                 ax = fig.gca()
@@ -139,12 +144,22 @@ class Plotter(metaclass=abc.ABCMeta):
 
         plt.style.use(obj.matplotlib_style)
 
-        fig, ax = self.get_figure(fig, ax, self.figsize, self.jupy_dpi)
+        fig, ax = self.get_figure(fig, ax, obj.plot_3d, self.figsize, self.jupy_dpi)
 
-        if obj.aspect and not self.plot_3d:
-            ax.set_aspect('equal')
+        if obj.axis_aspect and not (obj.axis_aspect == 'equal' and obj.plot_3d):
+            ax.set_aspect(obj.axis_aspect)
 
         self.set_static_lims(ax, obj.xlim, obj.ylim, obj.zlim)
+
+        if obj.axis_grid is not None:
+            ax.grid(obj.axis_grid)
+
+        if obj.axis_visibility is not None:
+            if obj.axis_visibility == 'off':
+                ax.set_axis_off()
+
+        if obj.axis_view_init is not None:
+            ax.view_init(*obj.axis_view_init)
 
         if obj.title:
             fig.suptitle(obj.title, fontsize=obj.titlesize)
@@ -166,7 +181,7 @@ class Plotter(metaclass=abc.ABCMeta):
         if obj.axis:
             ax.axis(obj.axis)
 
-        ax = self.plot(ax, obj, obj.zorder)
+        ax = self.plot(ax, obj, self.zorder)
 
         plt.tight_layout()
 
@@ -226,15 +241,15 @@ class Subplotter:
         self.figsize = figsize
 
     def __call__(self,
-                 obj: Union[Plotter.Object, Sequence[Plotter.Object], Sequence[Sequence[Plotter.Object]]],
-                 plot_functions: Union[Plotter, Iterable[Plotter]],
+                 objs: Union[Plotter.Object, Sequence[Plotter.Object], Sequence[Sequence[Plotter.Object]]],
+                 plot_functions: Union[Plotter, Sequence[Plotter], Sequence[Sequence[Plotter]]],
                  subplot_adjust: float = 0.9,
                  outfile: str = None,
                  close_fig: bool = False) -> Figure:
         """
         Plot the manifolds and save the results in outfile, if specified.
 
-        :param obj: the objects to plot
+        :param objs: the objects to plot
         :param outfile: if not None, saves the manifold in the specified path
         :param plot_functions: the function, or sequence of functions, to use to plot each obj
         :param subplot_adjust: adjust the distance between the title and the subplots
@@ -243,31 +258,30 @@ class Subplotter:
         :return: the figure
         """
 
-        if not isinstance(obj, collections.abc.Sequence):
+        if not isinstance(objs, collections.abc.Sequence):
             num_rows = 1
             num_cols = 1
-        elif not isinstance(obj[0], collections.abc.Sequence):
+        elif not isinstance(objs[0], collections.abc.Sequence):
             num_rows = 1
-            num_cols = len(obj)
+            num_cols = len(objs)
         else:
-            num_rows = len(obj)
-            num_cols = len(obj[0])
+            num_rows = len(objs)
+            num_cols = len(objs[0])
 
         fig, axes = plt.subplots(num_rows, num_cols, figsize=self.figsize, dpi=self.file_dpi)
 
-        flat_objs = _flatten(obj)
+        flat_objs = _flatten(objs)
         flat_axes = _flatten(axes)
+        flat_plot = _flatten(plot_functions)
 
         plt.style.use(flat_objs[0].matplotlib_style)
 
         assert len(flat_axes) == len(
             flat_objs) == num_cols * num_rows, f'Got {len(flat_objs)} objects, expected: {len(flat_axes)}'
 
-        plot_functions = cycle(plot_functions) if isinstance(plot_functions,
-                                                             collections.abc.Iterable) else cycle((plot_functions,))
+        plot_functions = cycle(flat_plot)
 
-        for (obj_el, ax_el) in zip(flat_objs, flat_axes):
-            plot_function = next(plot_functions)
+        for (obj_el, ax_el, plot_function) in zip(flat_objs, flat_axes, flat_plot):
             plot_function(obj=obj_el, ax=ax_el, fig=fig)
 
             if obj_el.subtitle:

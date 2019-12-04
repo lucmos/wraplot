@@ -8,7 +8,7 @@ from .plotter_definitions import (
     Spy,
     Imagesc,
     PlotCloud2D,
-    PlotColormap,
+    PlotScalarManifold,
     PlotManifold2D,
     PlotCloudOverManifold2D,
     PlotComparison,

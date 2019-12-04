@@ -1,4 +1,3 @@
-
 ######################################
 #  Instances classes
 ######################################
@@ -7,6 +6,7 @@ from typing import Any, Optional, Sequence
 
 import numpy as np
 from matplotlib.axes import Axes, mtri
+from mpl_toolkits.mplot3d import Axes3D
 
 from wraplot import Plotter
 
@@ -26,7 +26,6 @@ class Spy(Plotter):
     def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
         assert obj.matrix is not None
         ax.spy(obj.matrix, markersize=obj.markersize, zorder=zorder)
-        # ax.grid(False)
         return ax
 
 
@@ -38,13 +37,12 @@ class Imagesc(Plotter):
     def __init__(self,
                  file_dpi: int = 150,
                  jupy_dpi: int = 50,
-                 figsize: (int, int) = (15, 15)
-                 ):
+                 figsize: (int, int) = (15, 15)) -> None:
         super().__init__(file_dpi, jupy_dpi, figsize)
 
     def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
+        assert obj.matrix is not None
         ax.imshow(obj.matrix, zorder=zorder)
-        # ax.grid(False)
         return ax
 
 
@@ -61,8 +59,7 @@ class PlotCloud2D(Plotter):
     def __init__(self,
                  figsize: (int, int) = (15, 15),
                  file_dpi: int = 150,
-                 jupy_dpi: int = 50,
-                 ):
+                 jupy_dpi: int = 50) -> None:
         super().__init__(file_dpi, jupy_dpi, figsize)
 
     def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
@@ -78,30 +75,34 @@ class PlotCloud2D(Plotter):
         return ax
 
 
-class PlotColormap(Plotter):
+class PlotScalarManifold(Plotter):
     @dataclass
     class Object(Plotter.Object):
-        manifold: Any = None  # todo: should't be here https://bugs.python.org/issue36077
+        vertices: np.ndarray = None  # todo: should't be here https://bugs.python.org/issue36077
+        faces: np.ndarray = None
+
         manifold_color: Optional[str] = None
+        plot_3d: bool = True
+        axis_visibility = 'off'
 
     def __init__(self,
                  figsize: (int, int) = (15, 15),
                  file_dpi: int = 150,
-                 jupy_dpi: int = 50):
-        super().__init__(file_dpi, jupy_dpi, figsize, plot_3d=True)
+                 jupy_dpi: int = 50) -> None:
+        super().__init__(file_dpi, jupy_dpi, figsize)
 
-    def plot(self, ax: Axes, obj: Object, zorder: int = 1, plt=None) -> Axes:
-        assert obj.manifold is not None
-        manifold = obj.manifold
+    def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
+        assert obj.vertices is not None
+        assert obj.faces is not None
+
+        vertices = obj.vertices
+        faces = obj.faces.astype(int)
+
         color = obj.manifold_color
-
-        vertices = manifold.vertices
-        faces = manifold.faces.astype(int)
 
         triang = mtri.Triangulation(vertices[:, 0].ravel(),
                                     vertices[:, 1].ravel(), faces)
         ax.view_init(90, 0)
-        plt.axis('off')
         mm = ax.plot_trisurf(triang, np.zeros((vertices.shape[0], 1)).ravel(),
                              lw=0.4, edgecolor="black", color="white", alpha=1, zorder=zorder)
         colors = np.mean(color[faces], axis=1) if color is not None else vertices[:, 0]
@@ -116,20 +117,26 @@ class PlotManifold2D(Plotter):
 
     @dataclass
     class Object(Plotter.Object):
-        manifold: Any = None  # todo: should't be here https://bugs.python.org/issue36077
+        vertices: np.ndarray = None  # todo: should't be here https://bugs.python.org/issue36077
+        faces: np.ndarray = None
+
         color: (float, float, float) = (202, 62, 71)
+        plot_3d: bool = True
 
     def __init__(self,
                  figsize: (int, int) = (15, 15),
                  file_dpi: int = 150,
-                 jupy_dpi: int = 50):
-        super().__init__(file_dpi, jupy_dpi, figsize, plot_3d=True)
+                 jupy_dpi: int = 50) -> None:
+        super().__init__(file_dpi, jupy_dpi, figsize)
 
     def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
-        assert obj.manifold is not None
+        assert obj.vertices is not None
+        assert obj.faces is not None
 
-        ax.triplot(obj.manifold.vertices[:, 0], obj.manifold.vertices[:, 1], triangles=obj.manifold.faces,
-                   c=np.asarray(obj.color) / 255, zorder=zorder)
+        vertices = obj.vertices
+        faces = obj.faces.astype(int)
+
+        ax.triplot(vertices[:, 0], vertices[:, 1], triangles=faces, c=np.asarray(obj.color) / 255, zorder=zorder)
         return ax
 
 
@@ -170,12 +177,13 @@ class PlotComparison(Plotter):
         label: Optional[str] = None
         linewidth: float = 1
         legendsize: float = 20
+        axis_aspect = 'equal'
 
     def __init__(self,
                  figsize: (int, int) = (15, 15),
                  file_dpi: int = 150,
                  jupy_dpi: int = 50):
-        super().__init__(file_dpi, jupy_dpi, figsize, axes_equal=False)
+        super().__init__(file_dpi, jupy_dpi, figsize)
 
     def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
         assert obj.lines is not None
@@ -200,12 +208,13 @@ class PlotBarsComparison(Plotter):
         label: Optional[str] = None
         linewidth: float = 1
         legendsize: float = 20
+        axis_aspect = 'equal'
 
     def __init__(self,
                  figsize: (int, int) = (15, 15),
                  file_dpi: int = 150,
                  jupy_dpi: int = 50):
-        super().__init__(file_dpi, jupy_dpi, figsize, axes_equal=False)
+        super().__init__(file_dpi, jupy_dpi, figsize)
 
     def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
         assert obj.bars_value is not None
@@ -237,12 +246,13 @@ class PlotCoupledBarsComparison(Plotter):
         bar_width: float = .35
         linewidth: float = 1
         legendsize: float = 20
+        axis_aspect = 'equal'
 
     def __init__(self,
                  figsize: (int, int) = (15, 15),
                  file_dpi: int = 150,
                  jupy_dpi: int = 50):
-        super().__init__(file_dpi, jupy_dpi, figsize, axes_equal=False)
+        super().__init__(file_dpi, jupy_dpi, figsize)
 
     def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
         bar1_values = obj.bar1_values
@@ -270,27 +280,33 @@ class PlotCloud3D(Plotter):
     @dataclass
     class Object(Plotter.Object):
         points: np.ndarray = None  # todo: should't be here https://bugs.python.org/issue36077
-        xlim: (float, float) = (-1.15, 1.15)
-        ylim: (float, float) = (-1.15, 1.15)
-        markersize: int = 150
-        color: str = '#155084'
-        order_color_rgb: np.ndarray = None
+
+        xlim: (float, float) = (-0.15, 0.15)
+        ylim: (float, float) = (-0.15, 0.15)
+        zlim: (float, float) = (-0.15, 0.15)
+
+        cmap: str = 'Greens'
+        edgecolors: str = 'black'
+        linewidths: int = 1
+        markersize: int = 1
+
+        plot_3d: bool = True
 
     def __init__(self,
                  figsize: (int, int) = (15, 15),
                  file_dpi: int = 150,
                  jupy_dpi: int = 50,
-                 ):
+                 ) -> None:
         super().__init__(file_dpi, jupy_dpi, figsize)
 
-    def plot(self, ax: Axes, obj: Object, zorder: int = 1) -> Axes:
+    def plot(self, ax: Axes3D, obj: Object, zorder: int = 1) -> Axes3D:
         assert obj.points is not None
 
-        color = obj.color
-        if obj.order_color_rgb is not None:
-            color = np.tile(obj.order_color_rgb, (obj.points.shape[0], 1)) / 255
-            color = color * np.linspace(start=0, stop=1, num=obj.points.shape[0])[:, None]
-            color[color != color] = 0
-        points = np.reshape(obj.points, (-1, obj.points.shape[-1]))
-        ax.scatter(points[:, 0], points[:, 1], s=obj.markersize, c=color, marker='.', zorder=zorder)
+        ax.scatter3D(obj.points[:, 0], obj.points[:, 1], obj.points[:, 2],
+                     c=obj.points[:, 2],
+                     cmap=obj.cmap,
+                     edgecolors=obj.edgecolors,
+                     linewidths=obj.linewidths,
+                     s=obj.markersize)
+
         return ax

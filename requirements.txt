@@ -1,0 +1,5 @@
+streamlit
+matplotlib
+imageio
+imageio-ffmpeg
+numpy
