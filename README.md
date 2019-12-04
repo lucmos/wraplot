@@ -52,8 +52,7 @@ o = subplotter(objs=[[spyobj, cloudobj],
                      [imagescobj, spyobj]],
                plot_functions=[[spyplot, cloudplot],
                                [imagescplot, spyplot]],
-               outfile="sample/subplot.png",
-               subplot_adjust=0.98)
+               outfile="sample/subplot.png")
 ```
 ![](sample/subplot.png)
  
