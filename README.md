@@ -1,4 +1,8 @@
-# Installation
+# wraplot
+
+A simple matplotlib wrapper: plot, subplot and animate with ease.
+
+## Installation
 
 ```bash
 git clone git@github.com:LucaMoschella/wraplot.git
@@ -6,9 +10,9 @@ cd wraplot
 pip install .
 ```
 
-# Sample usage
+## Sample usage
 
-## Spy
+### Spy
 ```python
 spyplot = Spy()
 spyobj = Spy.Object(matrix=dense_matrix > 0.5,
@@ -19,7 +23,7 @@ o = spyplot(spyobj)
 
 ![](sample/spyplot.png)
 
-## Imagesc
+### Imagesc
 ```python
 spyplot = Spy()
 spyobj = Spy.Object(matrix=dense_matrix > 0.5,
@@ -29,7 +33,7 @@ o = spyplot(spyobj)
 ```
 ![](sample/imagescplot.png)
 
-## PlotCloud
+### PlotCloud
 ```python
 cloudplot = PlotCloud2D()
 cloudobj = PlotCloud2D.Object(points=points,
@@ -41,7 +45,7 @@ o = cloudplot(cloudobj, outfile="sample/cloudplot.png")
 ```
 ![](sample/cloudplot.png)
 
-## Subplotting
+### Subplotting
 ```python
 subplotter = Subplotter()
 o = subplotter(objs=[[spyobj, cloudobj],
@@ -53,7 +57,7 @@ o = subplotter(objs=[[spyobj, cloudobj],
 ```
 ![](sample/subplot.png)
  
-## Animation
+### Animation
 ```python
 animator = Animator()
 for i in range(50):
