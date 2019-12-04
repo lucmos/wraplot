@@ -1,6 +1,6 @@
 # wraplot
 
-A simple matplotlib wrapper: plot, subplot and animate with ease.
+A simple pythonic matplotlib wrapper: plot, subplot and animate with ease.
 
 ## Installation
 
