@@ -1,9 +1,12 @@
 [tool.poetry]
 name = "wraplot"
-version = "0.1.0"
+version = "0.1.1"
 description = "A simple python wrapper of matplotlib"
 authors = ["Luca Moschella <luca.moschella94@gmail.com>"]
 license = "MIT"
+
+repository = "https://github.com/LucaMoschella/wraplot"
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.7"
