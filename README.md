@@ -7,7 +7,7 @@ A simple pythonic matplotlib wrapper: plot, subplot and animate with ease.
 ```bash
 git clone git@github.com:LucaMoschella/wraplot.git
 cd wraplot
-pip install .
+poetry install 
 ```
 
 ## Sample usage

@@ -6,7 +6,7 @@
 ## Start interactive demo
 demo:
 	(export PYTHONPATH="${PYTHONPATH}:wraplot/"; \
-	streamlit run sample/demo.py)
+	poetry run streamlit run sample/demo.py)
 
 
 #################################################################################
